@@ -1,0 +1,107 @@
+@page "/return-status"
+@using TrackIt.Models
+@using TrackIt.Services
+@rendermode InteractiveServer
+@inject ProductService PS
+@inject NavigationManager Navigation
+@inject AppDbContext DbContext
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Return Status</PageTitle>
+
+<div class="search-container">
+    <input type="text" placeholder="Search..." @bind="searchText" />
+    <button class="btn-search" @onclick="Search">Search</button>
+    <button class="btn-change-view" @onclick="ToggleView">Change View</button>
+</div>
+
+@if (isCardView)
+{
+    <div class="card-view">
+        @foreach (var group in filteredProducts.GroupBy(p => p.Name))
+        {
+            foreach (var product in group)
+            {
+                <div class="product-card">
+                    <h5>@product.Name</h5>
+                    <p>Unit Measurement: @FormatUnit(product.UnitMeasurement)</p>
+                    <p>Manufactured: @product.ManufacturedDate.ToShortDateString()</p>
+                    <p>Expiry: @product.ExpiryDate.ToShortDateString()</p>
+                    <p>Price: @FormatPrice(product.Price)</p>
+                    <p>Boxes: @product.NumberOfBoxes</p>
+                    <p>Return Date: <input type="date" /></p>
+                    <button>Add</button>
+                    <button>Edit</button>
+                    <button>Delete</button>
+                </div>
+            }
+        }
+    </div>
+}
+else
+{
+    @foreach (var group in filteredProducts.GroupBy(p => p.Name))
+    {
+        <h4>@group.Key</h4>
+        <ul>
+        @foreach (var product in group)
+        {
+            <li>
+                <h5>@product.Name</h5>
+                <p>Unit Measurement: @FormatUnit(product.UnitMeasurement)</p>
+                <p>Manufactured: @product.ManufacturedDate.ToShortDateString()</p>
+                <p>Expiry: @product.ExpiryDate.ToShortDateString()</p>
+                <p>Price: @FormatPrice(product.Price)</p>
+                <p>Boxes: @product.NumberOfBoxes</p>
+                <p>Return Date: <input type="date" /></p>
+                <button>Add</button>
+                <button>Edit</button>
+                <button>Delete</button>
+            </li>
+        }
+        </ul>
+    }
+}
+
+@code {
+    private string? searchText;
+    private bool isCardView = false;
+
+    private List<Product> filteredProducts = new();
+
+    protected override void OnInitialized()
+    {
+        filteredProducts = DbContext.Products.ToList();
+    }
+
+    private void Search()
+    {
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            filteredProducts = DbContext.Products
+                .Where(p => p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        else
+        {
+            filteredProducts = DbContext.Products.ToList();
+        }
+    }
+
+    private void ToggleView()
+    {
+        isCardView = !isCardView;
+    }
+
+    private string FormatPrice(decimal price)
+    {
+        return price.ToString("C", CultureInfo.CreateSpecificCulture("en-US"));
+    }
+
+    private string FormatUnit(string? unit)
+    {
+        if (string.IsNullOrEmpty(unit)) return "";
+        return unit.Replace("X", " X ") + " Units";
+    }
+}

@@ -1,0 +1,106 @@
+@page "/supply-status"
+@using TrackIt.Models
+@using TrackIt.Services
+@rendermode InteractiveServer
+@inject ProductService PS
+@inject NavigationManager Navigation
+@inject AppDbContext DbContext
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Supply Status</PageTitle>
+
+<div class="supply-status-container">
+    <div class="search-container">
+        <input type="text" placeholder="Search..." @bind="searchTerm" />
+        <button @onclick="Search">Search</button>
+        <button @onclick="ToggleView">Change View</button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(searchTerm))
+    {
+        <p>Results for "@searchTerm":</p>
+    }
+
+    @if (isCardView)
+    {
+        <div class="card-view">
+            @foreach (var group in FilteredProducts.GroupBy(p => p.Name))
+            {
+                <h4>@group.Key</h4>
+                @foreach (var product in group)
+                {
+                    <div class="product-card">
+                        <h5>@product.Name</h5>
+                        <p>Unit Measurement: @FormatUnit(product.UnitMeasurement)</p>
+                        <p>Manufactured Date: @product.ManufacturedDate.ToShortDateString()</p>
+                        <p>Expiry Date: @product.ExpiryDate.ToShortDateString()</p>
+                        <p>Price: @product.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</p>
+                        <p>Inventory Left: @product.NumberOfBoxes</p>
+                        <p>Number of Products Supplied: <input type="number" /></p>
+                        <button>Add</button>
+                        <button @onclick="() => NavigateToUpdate(product.Id)">Edit</button>
+                        <button @onclick="() => NavigateToDelete(product.Id)">Delete</button>
+                    </div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var group in FilteredProducts.GroupBy(p => p.Name))
+        {
+            <h4>@group.Key</h4>
+            <ul>
+            @foreach (var product in group)
+            {
+                <li>
+                    <h5>@product.Name</h5>
+                    <p>Unit Measurement: @FormatUnit(product.UnitMeasurement)</p>
+                    <p>Manufactured Date: @product.ManufacturedDate.ToShortDateString()</p>
+                    <p>Expiry Date: @product.ExpiryDate.ToShortDateString()</p>
+                    <p>Price: @product.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</p>
+                    <p>Inventory Left: @product.NumberOfBoxes</p>
+                    <p>Number of Products Supplied: <input type="number" /></p>
+                    <button>Add</button>
+                    <button @onclick="() => NavigateToUpdate(product.Id)">Edit</button>
+                    <button @onclick="() => NavigateToDelete(product.Id)">Delete</button>
+                </li>
+            }
+            </ul>
+        }
+    }
+</div>
+
+@code {
+    private string searchTerm = string.Empty;
+    private bool isCardView = false;
+    private List<Product> FilteredProducts => DbContext.Products
+        .Where(p => string.IsNullOrWhiteSpace(searchTerm) || p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private void Search()
+    {
+        // Triggered by search button; currently auto-refreshes due to @bind
+    }
+
+    private void ToggleView()
+    {
+        isCardView = !isCardView;
+    }
+
+    private string FormatUnit(string unit)
+    {
+        return unit.Replace("gX", "g X ") + " Units";
+    }
+
+    private void NavigateToUpdate(int id)
+    {
+        Navigation.NavigateTo($"/edit-item/{id}");
+    }
+
+    private void NavigateToDelete(int id)
+    {
+        Navigation.NavigateTo($"/delete-item/{id}");
+    }
+}

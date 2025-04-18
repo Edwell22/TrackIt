@@ -1,0 +1,93 @@
+@page "/damage-report"
+@using TrackIt.Models
+@using TrackIt.Services
+@rendermode InteractiveServer
+@inject ProductService PS
+@inject NavigationManager Navigation
+@inject AppDbContext DbContext
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Damage Reports</PageTitle>
+
+<div class="search-container">
+    <input type="text" placeholder="Search..." @bind="search" />
+    <button class="btn-search" @onclick="Search">Search</button>
+    <button class="btn-change-view" @onclick="ChangeView">Change View</button>
+</div>
+
+<hr />
+
+@if (isTableView)
+{
+    @foreach (var group in FilteredProducts.GroupBy(p => p.Name))
+    {
+        <h4>@group.Key</h4>
+        <ul>
+            @foreach (var product in group)
+            {
+                <li>
+                    <h5>@product.Name</h5>
+                    <p>Unit Measurement: @FormatMeasurement(product)</p>
+                    <p>Manufactured Date: @product.ManufacturedDate.ToShortDateString()</p>
+                    <p>Expiry Date: @product.ExpiryDate.ToShortDateString()</p>
+                    <p>Price: @product.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</p>
+                    <p>Number of Boxes: @product.NumberOfBoxes</p>
+                    <p>Damage Report: <input type="text" /></p>
+                    <button class="btn btn-primary">Add</button>
+                    <button class="btn btn-warning">Edit</button>
+                    <button class="btn btn-danger">Delete</button>
+                </li>
+            }
+        </ul>
+    }
+}
+else
+{
+    <div class="card-view">
+        @foreach (var product in FilteredProducts)
+        {
+            <div class="card">
+                <h5>@product.Name</h5>
+                <p>@FormatMeasurement(product)</p>
+                <p>@product.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</p>
+                <p>@product.NumberOfBoxes Boxes</p>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private string? search;
+    private bool isTableView = true;
+    private List<Product> FilteredProducts;
+
+    protected override void OnInitialized()
+    {
+        FilteredProducts = DbContext.Products.ToList();
+    }
+
+    private void Search()
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            FilteredProducts = DbContext.Products.ToList();
+        }
+        else
+        {
+            FilteredProducts = DbContext.Products
+                .Where(p => p.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void ChangeView()
+    {
+        isTableView = !isTableView;
+    }
+
+    private string FormatMeasurement(Product product)
+    {
+        return $"{product.UnitMeasurement} X {product.UnitsPerBox} Units";
+    }
+}
